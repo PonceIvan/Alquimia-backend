@@ -13,8 +13,9 @@ using alquimia.Data.Data.Entities;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var connectionString = Environment.GetEnvironmentVariable("ALQUIMIA_DB_CONNECTION")
-                      ?? builder.Configuration.GetConnectionString("DefaultConnection");
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+
+Console.WriteLine("🧪 Conexión final en uso: " + connectionString);
 
 var clientId = builder.Configuration["OAuth:ClientID"];
 var clientSecret = builder.Configuration["OAuth:ClientSecret"];
