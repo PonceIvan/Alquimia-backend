@@ -1,0 +1,52 @@
+name: Deploy to Azure Web App
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Check for source code changes
+        id: changes
+        run: |
+          git fetch origin main
+          CHANGED=$(git diff --name-only HEAD~1 HEAD | grep -E '\.cs$|\.csproj$|\.sln$' || true)
+          if [ -z "$CHANGED" ]; then
+            echo "No relevant source changes detected. Skipping deployment."
+            echo "skip_deploy=true" >> $GITHUB_OUTPUT
+          else
+            echo "Source code changed. Proceeding with deployment."
+            echo "skip_deploy=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Restore dependencies
+        if: steps.changes.outputs.skip_deploy == 'false'
+        run: dotnet restore
+
+      - name: Build
+        if: steps.changes.outputs.skip_deploy == 'false'
+        run: dotnet build --configuration Release --no-restore
+
+      - name: Publish
+        if: steps.changes.outputs.skip_deploy == 'false'
+        run: dotnet publish -c Release -o ./publish
+
+      - name: Deploy to Azure Web App
+        if: steps.changes.outputs.skip_deploy == 'false'
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: Alquimia-deploy-back
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: ./publish
