@@ -9,6 +9,12 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
 
+    env:
+      ConnectionStrings__DefaultConnection: ${{ secrets.ConnectionStrings__DefaultConnection }}
+      OAuth__ClientID: ${{ secrets.OAuth__ClientID }}
+      OAuth__ClientSecret: ${{ secrets.OAuth__ClientSecret }}
+      Jwt__Key: ${{ secrets.Jwt__Key }}
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -18,35 +24,16 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      - name: Check for source code changes
-        id: changes
-        run: |
-          git fetch origin main
-          CHANGED=$(git diff --name-only HEAD~1 HEAD | grep -E '\.cs$|\.csproj$|\.sln$' || true)
-          if [ -z "$CHANGED" ]; then
-            echo "No relevant source changes detected. Skipping deployment."
-            echo "skip_deploy=true" >> $GITHUB_OUTPUT
-          else
-            echo "Source code changed. Proceeding with deployment."
-            echo "skip_deploy=false" >> $GITHUB_OUTPUT
-          fi
-
       - name: Restore dependencies
-        if: steps.changes.outputs.skip_deploy == 'false'
         run: dotnet restore
 
       - name: Build
-        if: steps.changes.outputs.skip_deploy == 'false'
         run: dotnet build --configuration Release --no-restore
 
       - name: Publish
-        if: steps.changes.outputs.skip_deploy == 'false'
         run: dotnet publish ./backendAlquimia.csproj -c Release -o ./publish
-    
-
 
       - name: Deploy to Azure Web App
-        if: steps.changes.outputs.skip_deploy == 'false'
         uses: azure/webapps-deploy@v3
         with:
           app-name: Alquimia-deploy-back
